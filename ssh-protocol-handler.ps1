@@ -1,25 +1,13 @@
-# Copyright (c) Victor Byrd. All rights reserved.
+# Copyright (c) Peet van de Sande. All rights reserved.
 # Licensed under the MIT License.
 #
-# SSH Protocol Handler Script for Windows Terminal
-# by Victor Byrd
-# Github: https://github.com/vbyrd/windows-terminal-ssh-protocol-handler/
-# 
-# Requires: Windows Terminal
-#   Store Link: https://www.microsoft.com/en-us/p/windows-terminal-preview/9n0dx20hk701
-# Requires: SSH Client
-#   Option 1: OpenSSH Client - Windows Feature from Windows 10 1809 on
-#       How-to Enable: https://bit.ly/2HIcRDm
-#   Option 2: plink SSH Client (Putty)
-#       Download Link: https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html
-#       Note: plink.exe path must be defined in your PATH environment variable 
 
 # --> Begin user modifiable variables
 
 # Set the SSH Client you would like to call
-# Options: <openssh|plink>
-# Default: openssh
-$sshPreferredClient = 'openssh'
+# Options: <openssh|plink|putty>
+# Default: putty
+$sshPreferredClient = 'putty'
 
 # Set if you would like to see verbose output from the SSH Clients (Debug)
 # Default: false
@@ -106,12 +94,13 @@ if ($sshPreferredClient -eq 'openssh') {
     }
 }
 
-if ($sshPreferredClient -eq 'plink') {
-    $appExec = Get-Command 'plink.exe' | Select-Object -ExpandProperty 'Source'
+if ($sshPreferredClient -eq 'plink') || ($sshPreferredClient -eq 'putty') {
+    $executableName = $sshPreferredClient + '.exe'
+    $appExec = Get-Command $executableName | Select-Object -ExpandProperty 'Source'
     if (Test-Path $appExec) {
         $SSHClient = $appExec
     } else {
-        Write-Warning 'Could not find plink.exe in Path. Exiting...'
+        Write-Warning 'Could not find {0} in Path. Exiting...' -f $executableName
         Exit
     }
 
@@ -126,15 +115,20 @@ if ($sshPreferredClient -eq 'plink') {
     }
 }
 
-$wtArguments = ''
-
-if ($wtProfile) {
-    $wtArguments += "-p {0} " -f $wtProfile
-}
-
 $sshCommand = $SSHClient + ' ' + $sshArguments
-$wtArguments += 'new-tab ' + $sshCommand
 
-#Write-Output "Start-Process Command: $windowsTerminal Arguments: $wtArguments"
-
-Start-Process -FilePath $windowsTerminal -ArgumentList $wtArguments
+if ($sshPreferredClient -eq 'putty') {
+	iex $sshCommand
+} else {
+	$wtArguments = ''
+	
+	if ($wtProfile) {
+	    $wtArguments += "-p {0} " -f $wtProfile
+	}
+	
+	$wtArguments += 'new-tab ' + $sshCommand
+	
+	#Write-Output "Start-Process Command: $windowsTerminal Arguments: $wtArguments"
+	
+	Start-Process -FilePath $windowsTerminal -ArgumentList $wtArguments
+}
